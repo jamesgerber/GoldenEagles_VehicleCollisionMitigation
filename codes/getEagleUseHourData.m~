@@ -183,19 +183,7 @@ if nargout==4
         if isequal(CarcassSpecies,'Deer')
 
         % does the comment in the file indicate that the camera/carcass
-        % connection was moved?  If so, don't include this.   
-        
-        % this really can't be automated.  If someone figures out a way to
-        % do that from the comments, or updates the comments, this code
-        % could be completed
-        
-        % We found 4 out of 79 carcasses for which this was the case in the
-        % manuscript, which is why there are 75 datapoints in
-        % getDeerCarcassData.m
-        
-            %if camera-carcass connection not disturbed
-                % calculate days of availability
-            %end
+        % connection was moved?  If so, don't include this
         
         
         end

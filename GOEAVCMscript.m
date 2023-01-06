@@ -10,6 +10,10 @@
 % via e-mail to sslater@hawkwatch.org
 
 
+% note that if a new set of data is incorporated, getDeerCarcassData.m will
+% need to be updated.  See the comments in that file and the end of
+% getEagleUseHourData for an explanation of why and how.
+
 
 % set up the paths
 % four directories:

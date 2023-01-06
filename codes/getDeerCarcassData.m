@@ -5,6 +5,12 @@ function [data,counts]=getDeerCarcassData;
 %  carcasses whose observed persistence is N days.
 %
 %  second output is this data reformatted to give counts.
+%
+%  This data is hardcoded becasue the comments have to be evaluated on an
+%  individual basis to determine if there was a break in the camera-carcass
+%  connection.  This excluded 4 out of the 79 observed carcasses in the
+%  dataset used in the manuscript.  There's a bit more information in
+%  comments at the very end of getEagleUseHourData
 
 data=[11
 8
