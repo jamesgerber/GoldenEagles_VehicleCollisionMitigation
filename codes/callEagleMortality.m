@@ -8,29 +8,48 @@ GOEAVCMconstantsfile
 
 fidout=fopen(EagleMortalityOutputFilename,'w');
 
-% call with default parameters just to get the County names.
-[minval,EagleMortalityPerCounty,EaglesPerCounty,CountyMortalityStructure]=EagleMortality;
+[~,~,CountyName]=GetWyomingCountyInfo;
+% "~" syntax tells matlab you don't need the output/makes cleaner code.
 
 fprintf(fidout,'%s','CollisionMortality,k,ScalarMultiplier,RemovalInterval,code,deathsWY,mortalityWY');
 
-for j=1:numel(CountyMortalityStructure);
-    cn=CountyMortalityStructure(j).CountyName;
-    fprintf(fidout,',%s',[cn '_totalEagles,' cn '_SU,' cn '_SUremoved50p,' cn '_GEdeathNR50,' cn '_GEdeathWR50,' cn '_GEdeathNR20,' cn '_GEdeathWR20,' cn '_GEdeathNR80,' cn '_GEdeathWR80'  ])
+for j=1:numel(CountyName);
+    cn=CountyName{j};
+    fprintf(fidout,',%s',[cn '_totalEagles,' cn '_SU,' cn '_SUremoved50p,' cn '_GEdeathNR50,' cn '_GEdeathWR50,' cn '_GEdeathNR20,' cn '_GEdeathWR20,' cn '_GEdeathNR80,' cn '_GEdeathWR80'  ]);
 end
 fprintf(fidout,'\n');
 
 clear minval
 
+
+% about to start a brute force search over JP and k space.    JP is "joint
+% product" which is a product of U and C where U is use hours and C is
+% collision probability.  k is traffic avoidance parameter.   We do the
+% search over JP because eagle mortality is more or less independent of U *
+% C.  (Think about it:  if Use hours goes up by 2 and collision probability
+% goes down by 2, you'll get the same number of collisions.)  It's not
+% perfectly independent - the probability expressions have to take into
+% account higher-order things such as running out eagles to collide with.
+% 
+% One thing that makes the code below a bit unclear (in my opinion) is that
+% EagleMortality takes a single parameter which is a three element vector
+% ("paramvector") where paramvector = [k U C].  So just below here, I pick
+% some arbitrary value of U and use that.
+%
+% Since the three parameters correspond to the numerical expressions in the
+% paper, I'm keeping this syntax for EagleMortality.
 for m=1:numel(linearspacedJP)
-    
-    AvgAdMortality = linearspacedJP(m); %actually this is the collision rate
-    Usteps= 5; 
     for j=1:numel(ksteps)
+        
+        AvgAdMortality = linearspacedJP(m); %actually this is the collision rate
+        Usteps= 5;
+
+        
         [minval(j,m),EagleMortalityPerCounty,EaglesPerCounty,CountyMortalityStructure]=EagleMortality([ksteps(j) Usteps AvgAdMortality]);
         deaths(j,m)=sum(EagleMortalityPerCounty);
         mortality(j,m)=sum(EagleMortalityPerCounty)/sum(EaglesPerCounty);
         
-        [ksteps(j) Usteps*AvgAdMortality]
+ %       [ksteps(j) Usteps*AvgAdMortality]
         
         RIV=CountyMortalityStructure(1).RemovalIntervalVector;
         

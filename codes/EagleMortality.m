@@ -47,10 +47,10 @@ function [x,EagleMortalityPerCounty,EaglesPerCounty,CountyMortalityStructure]=Ea
 
 
 MakeFile=0;
-SeparateIsScavengedCalculationFlag=0;
+%SeparateIsScavengedCalculationFlag=0;  Can be removed
 lengthofseason=180;
 ReferenceEagleDensity=0.03;
-Nrealizations=500;
+Nrealizations=10;
 RemovalIntervalVector=[0 1]% 3 7 14 30];
 TestCountyFlag=0;
 
@@ -66,13 +66,13 @@ end
 
 
 
-
-switch getenv('USER')
-    case 'jsgerber'
-        basedir='~/sandbox/jsg182_AWWI_EagleStrikes/outputfiles/';
-    otherwise
-        error('need to define basedir')
-end
+% this is useless / leaving here so line numbers don't change
+% switch getenv('USER')
+%     case 'jsgerber'
+%         basedir='~/sandbox/jsg182_AWWI_EagleStrikes/outputfiles/';
+%     otherwise
+%         error('need to define basedir')
+% end
 
 
 
@@ -134,16 +134,9 @@ DCPcum=cumsum(DeerCarcPersistenceProbaVect);
 
 
 
-
-
-
-
-
-
-
 %Cycle through each county
 
-for jcounty=1:length(CountyName)
+for jcounty=1:length(CountyName)  %jcounty loop
     
     Nmax=1e7;
     listoferfinvs=erfinv(rand(1,Nmax));
@@ -162,7 +155,7 @@ for jcounty=1:length(CountyName)
     
     switch TestCountyFlag
         case 0
-        [deer_road,km_road,vph,road_types]=CarcassOnRoads(FIPS(jcounty));
+            [deer_road,km_road,vph,road_types]=CarcassOnRoads(FIPS(jcounty));
         case 1
             deer_road=[0 1.5 2]';
             vph=[15 25 35];
@@ -171,17 +164,14 @@ for jcounty=1:length(CountyName)
             deer_road=[25 25];
             vph=[1 1]*vphvect(jcounty);
     end
-    
-      clear M
-    clear RemovalMat  
-    
+    clear M
+    clear RemovalMat
+    %Nrealizations is hardwired above.  set to 10 or so for developing
     for jreal=1:Nrealizations
-
-
-    
+        
         % Construct a Carcass Structure "CS"
         clear CSvector
-    
+        
         % Carcass Structure has the following fields
         %
         %     .VPH
@@ -189,16 +179,19 @@ for jcounty=1:length(CountyName)
         %     .UseHoursPerDay
         %
         %     and has one element for each carcass.
-        counter=0;
+        counter=0;  % this will count up the number of carcasses in this realization of this county.
         Ndeer=0;
-        for jrt=1:numel(deer_road)
+        for jrt=1:numel(vph)   % road type loop
             % counting over every type of road
             % jrt = "j road type"
             numDeerOnThisRoadType=deer_road(jrt);
-            % now round to nearest integer
+            % now round to nearest integer but statistically.  in other
+            % words if there is 1.3 deer on road, there is a 30% chance
+            % that you have 2 deer, a 70% chance you have 1 deer going
+            % forward in simulation
             f=mod(numDeerOnThisRoadType,1); % f= fraction left over
             
-            x=localrand;
+            x=rand;
             
             if x>f
                 numDeerOnThisRoadTypeInteger=floor(numDeerOnThisRoadType);
@@ -206,9 +199,16 @@ for jcounty=1:length(CountyName)
                 numDeerOnThisRoadTypeInteger=ceil(numDeerOnThisRoadType);
             end
             
-            
             Ndeer(jrt)=numDeerOnThisRoadTypeInteger;
-        
+            % now preparing for modeling below, going to model each deer individually,
+            % so get the characteristics associated with this deer into CS ("Carcass
+            % Structre"
+            
+            
+            
+            
+            
+            
             for j=1:numDeerOnThisRoadTypeInteger
                 clear CS
                 
@@ -219,7 +219,7 @@ for jcounty=1:length(CountyName)
                 CSvector(counter)=CS;
             end
         end
-    
+        % end of road type loop
         NumDeerThisCounty(jreal)=sum(Ndeer);
         
         %  for reference, to help understand codes below.  but calls are above
@@ -234,11 +234,11 @@ for jcounty=1:length(CountyName)
         % for each element and realization, need to construct vector of
         % use hours per day.
         for jv=1:numel(CSvector);
-        
+            
             CS=CSvector(jv);
             
             % how many days for this particular carcass x this particular realization?
-            [NumDays]=min(find(DCPcum>localrand));
+            [NumDays]=min(find(DCPcum>rand));
             
             usehoursrealization=zeros(1,NumDays);
             for jd=1:NumDays
@@ -246,31 +246,32 @@ for jcounty=1:length(CountyName)
                 
                 %will carcass be scavenged ?
                 %[dayvect1,ProbabilityOfScavenging,dcpdata1]=FitDistributions_ProbabilityOfScavenging;
-                if SeparateIsScavengedCalculationFlag==1
-                    if localrand<ProbabilityOfScavenging(jd)
-                        % yes, going to be scavenged
-                        
-                        % mean use hours:
-                        meanusehours=avg_tot_usehr_percarcday_distribution1(jd);
-                        
-                        % stochastic use hours:
-                        usehoursrealization(jd)=GaussianDistribution_Mean_to_Realization(meanusehours);
-                    else
-                        % no scavenging
-                        usehoursrealization(jd)=0;
-                    end
-                else
-                    
-                    meanusehours=avg_tot_usehr_percarcday_distribution1(jd).*ProbabilityOfScavenging(jd);
-                 %   usehoursrealization(jd)=GaussianDistribution_Mean_to_Realization(meanusehours);
-                    erfinvcounter=erfinvcounter+1;
-                    
-                    sigma=sqrt(pi)/sqrt(2)*meanusehours;
-                    
-                    usehoursrealization(jd)=sigma*sqrt(2)*listoferfinvs(erfinvcounter);
-
-                    
-                end
+                %                 if SeparateIsScavengedCalculationFlag==1
+                %                     if rand<ProbabilityOfScavenging(jd)
+                %                         % yes, going to be scavenged
+                %
+                %                         % mean use hours:
+                %                         meanusehours=avg_tot_usehr_percarcday_distribution1(jd);
+                %
+                %                         % stochastic use hours:
+                %                         usehoursrealization(jd)=GaussianDistribution_Mean_to_Realization(meanusehours);
+                %                     else
+                %                         % no scavenging
+                %                         usehoursrealization(jd)=0;
+                %                     end
+                %                 else
+                % below: theoretical distributions.
+                meanusehours=avg_tot_usehr_percarcday_distribution1(jd).*ProbabilityOfScavenging(jd);
+                %   usehoursrealization(jd)=GaussianDistribution_Mean_to_Realization(meanusehours);
+                erfinvcounter=erfinvcounter+1;
+                % this is how you invert a distribution of random
+                % variables that are described by a Cauchy Dist.
+                sigma=sqrt(pi)/sqrt(2)*meanusehours;
+                
+                usehoursrealization(jd)=sigma*sqrt(2)*listoferfinvs(erfinvcounter);
+                
+                
+                %                 end
             end
             % what day of interval did this carcass appear?
             
@@ -279,7 +280,7 @@ for jcounty=1:length(CountyName)
             
             
             for jRI=1:numel(CSvector(jv).RemovalInterval);
-              %  CS=CSvector(jv);
+                %  CS=CSvector(jv);
                 RI=CSvector(jv).RemovalInterval(jRI);
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 % This is the heart of the algorithm right here   %
@@ -291,8 +292,8 @@ for jcounty=1:length(CountyName)
                 if RI==0 | isinf(RI)
                     % this is a flag for no removal
                     RemovalFlag=0;
-
-                    Ndays=numel(usehoursrealization);
+                    
+                    Ndays=numel(usehoursrealization);  % confusing code, sorry ... how many days here?
                 else
                     % calculate number of days carcass is around
                     % it will be the minimum of the number of days of
@@ -309,13 +310,15 @@ for jcounty=1:length(CountyName)
                         usehoursrealization(Ndays)=usehoursrealization(Ndays)/2;
                         RemovalFlag=1;
                     else
-                       % no removal
-                       RemovalFlag=0;
-                       Ndays=numel(usehoursrealization);
+                        % no removal
+                        RemovalFlag=0;
+                        Ndays=numel(usehoursrealization);
                     end
                 end
                 
-                
+                % here is where we pull everything together and calculate
+                % chance of an eagle collision for this realization of a
+                % carcass being there and number of eagles.
                 % ok ... let's calculate exponent:  vehicles per hour x
                 % use hours
                 
@@ -331,40 +334,48 @@ for jcounty=1:length(CountyName)
                 H=(1-theta)*UHscale*sum(usehoursrealization(1:Ndays));
                 VH=CSvector(jv).VPH*H;
                 mu=IS.collisionperVxE;
-
+                % M is for Mortality from Eq 1 of paper.  However, N in the paper is number of carcasses, where
+                % here is the 3rd dimension M, so we'll have to sum over
+                % that below.  In other words, strictly, speaking the sum
+                % indicated in equation 1 needs to be carried out over the
+                % 3rd dimension of the variable M here.
+                % M's dimensions (in this code) thus are:
+                % removal interval
+                % which realization
+                % which carcass
                 M(jRI,jreal,jv)=(1-(1-mu)^VH);
                 
                 RemovalMat(jRI,jreal,jv)=RemovalFlag;
-            end
-            
-            
-        end
+            end %% End of removal interval loop.
+        end  % end of loop over 'jv' number of carcasses on roads in this simulation
         % how many days until this carcass is removed?
-    %    CSvector(jv).Mortality=quantile(M,[.2 .5 .8],2);
-    %    CSvector(jv).Removals=mean(RemovalMat,2);
-    end
-        
-     
-    % now have done all of the realizations and
+        %    CSvector(jv).Mortality=quantile(M,[.2 .5 .8],2);
+        %    CSvector(jv).Removals=mean(RemovalMat,2);
+    end   % number of realizations
+    
+    % now have done all of the realizations and need to figure out some
+    % statistics.  Everything is in M.
     tmp=sum(M,3);
     Mortality=quantile(tmp,[.2 .5 .8],2);
+    % dimensions of Mortality:  [removal intervals ] x 3, where 3 is
+    % quantiles.
     
     tmp=sum(RemovalMat,3);
     Removals=mean(tmp,2);
     
     
-%     % now calculate total mortality for this county
-%     if numel(CSvector)==0
-%         keyboard
-%         CountyMortality=0;
-%     else
-%         CountyMortality=CSvector(1).Mortality*0;
-%         CountySURemovals=CSvector(1).Removals*0;
-%         for jv=1:numel(CSvector)
-%             CountyMortality=CountyMortality+CSvector(jv).Mortality;
-%             CountySURemovals=CountySURemovals+CSvector(jv).Removals;
-%         end
-%     end
+    %     % now calculate total mortality for this county
+    %     if numel(CSvector)==0
+    %         keyboard
+    %         CountyMortality=0;
+    %     else
+    %         CountyMortality=CSvector(1).Mortality*0;
+    %         CountySURemovals=CSvector(1).Removals*0;
+    %         for jv=1:numel(CSvector)
+    %             CountyMortality=CountyMortality+CSvector(jv).Mortality;
+    %             CountySURemovals=CountySURemovals+CSvector(jv).Removals;
+    %         end
+    %     end
     
     CountyMortalityStructure(jcounty).CountyMortality=Mortality;
     CountyMortalityStructure(jcounty).CountyName=CountyName{jcounty};
@@ -372,24 +383,23 @@ for jcounty=1:length(CountyName)
     CountyMortalityStructure(jcounty).CountySURemovals=Removals;
     CountyMortalityStructure(jcounty).SU=RemovalIntervalVector;
     CountyMortalityStructure(jcounty).NumDeerThisCounty=mean(NumDeerThisCounty);
-
-end
-
+    
+end  % end of jcounty loop
 % calculate total mortality
 
 for j=1:numel(FIPS)
     CountyMortalityNoRemovals(j)=CountyMortalityStructure(j).CountyMortality(1,2);
     EaglesPerCounty(j)=sq_km(j)*ReferenceEagleDensity;
 end
-    
+
 EagleMortalityPerCounty=CountyMortalityNoRemovals;
+
+% now we calculate "x" this is something we might want to minimize so it
+% can take advnatage of some built-in optimization functions.
 x=(1-sum(CountyMortalityNoRemovals)/sum(EaglesPerCounty)).^2;
 
-end
 
-function x=localrand;
-x=rand;
-end
+
 
 
 
