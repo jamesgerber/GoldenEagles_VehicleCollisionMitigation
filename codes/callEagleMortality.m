@@ -31,13 +31,23 @@ clear minval
 % perfectly independent - the probability expressions have to take into
 % account higher-order things such as running out eagles to collide with.
 % 
-% One thing that makes the code below a bit unclear (in my opinion) is that
+% One thing that makes the code below a bit unclear (sorry!) is that
 % EagleMortality takes a single parameter which is a three element vector
-% ("paramvector") where paramvector = [k U C].  So just below here, I pick
-% some arbitrary value of U and use that.
+% ("paramvector") where paramvector = [k U C]. 
 %
-% Since the three parameters correspond to the numerical expressions in the
-% paper, I'm keeping this syntax for EagleMortality.
+%  Let me explain: there is an important programming benefit to having
+%  the function parameters be passed in as a single multi-element vector.
+%  The benefit is that an optimization function can then determine the
+%  vector which minimizes something.
+%
+%  The function as written requires 3 parameters.  These 3 parameters are
+%  in the paper so this makes.  
+%
+%  However - as explained above, these 3 parameters aren't meaningfully
+%  independent, and we do the analysis over 2 parameters.  In practice,
+%  below, I pick some arbitrary value of U and hold that fixed and vary the
+%  other 2.
+% 
 for m=1:numel(linearspacedJP)
     for j=1:numel(ksteps)
         
